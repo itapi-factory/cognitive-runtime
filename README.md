@@ -9,3 +9,11 @@ choose an appropriate behavior, act through deterministic tools, verify the outc
 and learn from experience.
 
 This repository develops that idea through working software, experiments and architectural notes.
+
+## Status
+
+Experimental and under active development. The repository intentionally documents failures as well as successful results.
+
+## Notes
+
+* [Field notes](FIELD_NOTES.md) — observations from working implementations and the architectural changes they cause.
