@@ -1,3 +1,29 @@
+## 2026-09-05 — Safe because it does not work
+
+Today's Radar JST experiment exposed another failure of the harness.
+
+The runtime received a simple analytical question. Instead of investigating its uncertainty, it classified the uncertainty, applied confidence thresholds and stopped before inspecting the available data. The result was safe in the narrowest possible sense: it could not produce a wrong answer because it produced no useful answer at all.
+
+The harness had transferred too much defensive caution into the cognitive layer. It treated ambiguity as a reason to stop, although ambiguity is precisely what should activate cognition.
+
+The emerging rules are:
+
+* **high freedom of observation** — the runtime should freely inspect schema, values, relations, context and intermediate results through deterministic sensors;
+* **high operational freedom for investigation** — read-only queries, competing hypotheses and failed analytical attempts are normal costs of cognition;
+* **intuition initiates investigation** — an implausible result should trigger another look at identity, scope, measure and aggregation, not a hard-coded domain threshold;
+* **coherence justifies an answer** — if the question, resolved meaning, selected entity, data grain, query, result and response form one traceable chain, the system has sufficient grounds to answer from that dataset.
+
+Determinism remains valuable at the boundaries: permissions, destructive effects, transactions, provenance and reproducibility. It should not be used to predetermine how the system is allowed to think.
+
+A coding harness naturally rewards explicit constraints and passing tests. In a cognitive system this pressure can produce increasingly cautious software that is formally controlled but practically useless.
+
+The updated principle is:
+
+> **Uncertainty must trigger cognition, not a brake.**
+
+The purpose of the harness is to make cognition observable and its effects accountable — not to prevent cognition from occurring.
+
+
 ## 2026-09-05 — Two failures and a change of direction
 
 Today produced two useful failures.
