@@ -1,3 +1,86 @@
+## 2026-09-05 — Two failures and a change of direction
+
+Today produced two useful failures.
+
+### Failure 1: the “full factory” integration
+
+We attempted to connect ChatGPT and the local Codex-based software factory into one direct collaboration workflow.
+
+The result was operationally poor. The integration added setup, indirection and fragility, but did not add enough cognitive value. Instead of improving the work, it made the boundary between planning, implementation and review harder to control.
+
+For now, the direct integration is abandoned as the primary collaboration mechanism. Git becomes the interface:
+
+* architecture and tasks are expressed explicitly,
+* Codex works against the implementation repository,
+* changes are reviewed as commits,
+* evidence remains inspectable and reproducible.
+
+This is not a rejection of multi-agent cooperation. It is an observation that a simple, durable protocol can be more useful than a technically ambitious but unreliable connection.
+
+### Failure 2: Codex encoded the test instead of improving cognition
+
+The more important failure happened inside Radar JST.
+
+When the system failed to answer a question, the implementation drifted toward adding rules for the observed case. A question about schools produced logic about schools. Another question would have produced another branch, keyword or special path.
+
+The code grew, but the system's general capability did not.
+
+This is a critical failure mode for Cognitive Runtime Software:
+
+**a development agent can make individual tests pass while gradually removing the system's ability to understand new situations.**
+
+A system built this way may appear to improve, while actually becoming a collection of increasingly narrow reactions.
+
+The architectural rule is now explicit:
+
+> A failed example must lead to a reusable cognitive capability, not a rule that recognizes the example.
+
+Deterministic code should define tools, contracts, constraints, state transitions and verification. It should not attempt to enumerate the meanings of future user questions.
+
+### Influence of Sowa's cognitive architecture
+
+John F. Sowa's work on conceptual structures provided a useful vocabulary for the next change.
+
+In particular:
+
+* incoming results can be treated as observations rather than final answers,
+* previous experience participates in interpreting those observations,
+* the runtime maintains a working model of the current situation,
+* cognition proceeds through induction, abduction, deduction, action and renewed observation,
+* reasoning remains grounded in the “twin gates” of perception and action.
+
+This maps well to the practical problem we observed.
+
+An API response, SQL result, file, timeout or schema mismatch is an observation. It must be interpreted in relation to the current goal, expectations, previous attempts and available evidence.
+
+The local LLM will therefore serve primarily as a supervisor of runtime execution. It will not replace deterministic functions. It will help the runtime understand what happened.
+
+When an endpoint behaves unexpectedly, the supervisor may:
+
+* describe the discrepancy between expectation and observation,
+* formulate one or more testable hypotheses,
+* request a small, bounded diagnostic action,
+* interpret the result,
+* propose a small atomic change when the evidence supports it.
+
+### MVP direction
+
+The MVP will introduce:
+
+1. **Runtime Working Model** — explicit state containing the goal, current understanding, evidence, hypotheses, attempted actions and unresolved questions.
+2. **Cognitive Observation Layer** — a boundary that turns execution results into structured observations.
+3. **Cognitive Traces** — durable records of observation, expectation, hypothesis, test and outcome.
+4. **Bounded supervision** — the LLM investigates anomalies through permitted deterministic tools and limited action budgets.
+5. **Knowledge candidates** — learned conclusions remain provisional until supported by reproducible evidence or accepted through an appropriate review path.
+6. **Generality checks** — proposed fixes must improve a reusable capability rather than encode the vocabulary of a single test.
+
+The runtime is not supposed to know in advance that the user will ask about schools, canteens, hospitals or roads.
+
+It is supposed to understand the question, identify what kind of evidence is needed, discover how to acquire it, use an appropriate capability, observe the result and revise its working model.
+
+That is the experiment now.
+
+
 ## 2026-09-05 — When one cognitive system has to judge another
 
 While integrating Radar JST with GAARD, we hit an unexpected boundary.
