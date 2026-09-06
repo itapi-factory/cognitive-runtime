@@ -1,6 +1,6 @@
 ## 2026-09-06 — Criticism Is Unnecessary Because It Is Inevitable
 
-Today's result was not a collection of fixes for a question about cardiology. It was a change in how the runtime decides whether its work is complete.
+Today we tested a runtime built around small cognitive bubbles and a deterministic integrator. It was a change in how the runtime decides whether its work is complete.
 
 GAARD could discover useful facts, prepare data and return evidence. Radar could still prevent those findings from becoming an answer. We had placed an LLM critic between discovery and completion and instructed it to find what was wrong.
 
