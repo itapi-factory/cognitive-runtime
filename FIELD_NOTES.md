@@ -1,74 +1,72 @@
 ## 2026-09-06 — Criticism Is Unnecessary Because It Is Inevitable
 
-Today we tested a runtime built around small cognitive bubbles and a deterministic integrator. It was a change in how the runtime decides whether its work is complete.
+Today we moved Radar's completion decision from an LLM critic to deterministic integration of small, evidence-backed contributions.
 
-GAARD could discover useful facts, prepare data and return evidence. Radar could still prevent those findings from becoming an answer. We had placed an LLM critic between discovery and completion and instructed it to find what was wrong.
+The change grew out of a recurring failure. GAARD discovered useful facts and delivered the data needed to build an answer. Radar then asked another LLM to find problems with that answer. The resulting objections triggered further investigation, sometimes displacing findings that had already been established.
 
-It did exactly that.
+### The critic was doing its job
 
-### Criticism as an operational imperative
+The crucial observation was about the instruction itself.
 
-Ask an LLM “What is wrong with this answer?” and finding something wrong becomes its task. A possible objection is a successful response to that instruction, even when it does not identify an actual error.
+Ask an LLM “What is wrong?” and finding something wrong becomes the requested output. There is always another possible interpretation, another qualification or another way to demand more proof. The model can fulfil its task without discovering an actual contradiction.
 
-That is the imperative exposed today: the model is expected to produce criticism, and the runtime mistakes the fulfilment of that expectation for evidence that more work is necessary.
+In this role, the model “must” criticize: criticism is what we have instructed it to produce. That is its operational imperative. We were treating the fulfilment of that imperative as evidence that the analysis was incomplete.
 
-In our traces, a result established across several queries was challenged because the final query did not repeat the entire calculation. The objection introduced another investigation, another assumption and another opportunity to lose the meaning of the original task.
+One objection concerned a result established through several queries: the final query did not repeat the whole calculation. The runtime let that observation create a new obligation, although the earlier evidence was still available.
 
-The problem was not merely excessive confidence in one critic. Our first revision removed its formal veto and made its opinion one weighted signal among others. Yet its objection still directed the investigation. Reducing its authority did not remove the imperative that produced the objection.
+Our first response was to remove the critic's veto and make its opinion one weighted input among others. That changed its formal authority, but its objections still steered the investigation. Another LLM acting as integrator could adopt the same doubt and continue the loop.
 
-The conclusion concerns open-ended criticism as a completion mechanism, not verification itself. We still need reproducible execution, evidence and checks against concrete requirements. What we do not need is another invitation to invent a reason not to finish.
+The necessary change was to stop asking for an unrestricted judgment at the point of completion.
 
-### Bubbles instead of a judge
+### The bubble model
 
-We developed the idea of a runtime composed of small cognitive “bubbles”.
+We developed the runtime as a network of small cognitive bubbles.
 
-A bubble need not contain an entire process or represent an autonomous agent. It can express one useful result: a short statement, a numerical assessment, a limitation and a reference to the observation that supports it.
+A bubble represents a local contribution: a short statement, a numerical assessment, supporting evidence and any relevant limitation. It does not have to be an entire agent or solve the whole task.
 
-Its contribution is local. A discovered dictionary mapping does not have to name the hospital and calculate the final ranking. It has to resolve the particular uncertainty it addresses.
+The model brings together weighted inputs, a goal that gives them meaning, integration and an activation condition. A finding contributes according to what it establishes for the current goal. The combined contributions determine whether to act, continue investigating or produce an answer.
 
-The emerging model has weighted inputs, a goal that gives those inputs meaning, an integrator and an activation condition. The purpose is to combine small contributions into a decision, without asking another LLM to judge the whole answer.
+For example, discovering how a dataset represents a term is useful before any final result exists. That finding resolves a local unknown. Demanding that it also contain the complete answer defeats the purpose of dividing cognition into small contributions.
 
-This also changes the place of GAARD's Business Logic discoveries. A finding should be usable as supported working knowledge within an investigation without automatically becoming a permanent global rule. Rejecting it because it does not answer the entire user question destroys precisely the intermediate knowledge the next step needs.
+This applies directly to GAARD's Business Logic discoveries. They need a path into the investigation as supported working knowledge, with permanent acceptance handled separately. Today's traces showed that this local-versus-global distinction was still not respected consistently.
 
-The intended learning mechanism is adaptation of connection weights from observed usefulness. That remains a direction, not an accomplished result. Today's work did not demonstrate a self-learning network, and an LLM's declared confidence is not a calibrated probability.
+The longer-term idea is to strengthen or weaken connections according to their demonstrated usefulness in reducing goal-relevant ignorance. We have not yet demonstrated that learning mechanism. Declared confidence alone would not be an adequate learning signal.
 
-### What actually worked
+### What the implementation demonstrated
 
-The next implementation moved the completion decision out of the global critic altogether.
+The revised runtime builds a dynamic set of success criteria from the user's question. Local LLM assessments associate findings with those criteria. A deterministic integrator then calculates weighted coverage.
 
-An LLM decomposes the current question into atomic success criteria. Small semantic assessments connect evidence to those criteria. The integrator then calculates weighted coverage deterministically. Further investigation must address an identified gap, not an unrestricted objection.
+The LLM still interprets meaning. It no longer supplies the global verdict.
 
-In the final reported run, the first investigation reached a score of 0.8. A specific criterion remained unsupported: that the selected value was the maximum. The next investigation supplied that evidence, the score reached 1.0, and Radar answered.
+In the final run, the first investigation left one recorded gap. The second addressed that gap, earlier evidence remained available, and the runtime completed the answer without calling a global critic.
 
-The global critic did not intervene. Earlier evidence remained available. The additional investigation addressed the recorded gap instead of introducing a new requirement.
+That is the concrete gain from today: further work became attributable to a specific missing contribution, and completion followed from the accumulated state. We could inspect why the system continued and why it stopped.
 
-That is the demonstrated gain: completion became an inspectable consequence of accumulated contributions. It no longer depended on a model deciding that it had run out of things to criticize.
+Verification remains necessary. It must establish what an observation supports, rather than invite an unlimited search for conceivable objections.
 
-### What did not work
+### What the final answer exposed
 
-The final answer was still semantically wrong.
+The completed answer was still wrong.
 
-During interpretation, the system silently narrowed “the longest queue” to a particular forecast waiting-time measure. It also expanded the service selection to include cardiac rehabilitation. It then assembled valid database results for that altered question.
+The system had silently selected a narrower interpretation of the requested measure and a broader interpretation of the relevant services. It then correctly calculated a result for that altered question.
 
-The integrator correctly calculated coverage for incorrectly grounded criteria.
+The integrator counted the supplied contributions correctly. The meaning supplied to it was wrong.
 
-This matters because a score of 1.0 means that the represented requirements are covered. It does not mean that the representation preserved the user's intent. Deterministic arithmetic cannot make its semantic inputs correct.
+This is the limit of today's result. Deterministic integration makes the decision reproducible; it does not make LLM interpretation infallible. The bubbles must preserve their relationship to the original question and to each other. Useful local discoveries must survive the journey between components.
 
-The same failure appeared earlier when relevant dictionary candidates were discarded for not containing the whole answer. Local discoveries were still being judged against a global goal. The bubble principle had reached the completion mechanism, but not every part of the runtime.
+### What follows
 
-### The remaining work is generalization
+The remaining case-specific branches must be dismantled and generalized into reusable capabilities. Encoding one more service name, column choice or phrasing would only teach the software to recognize another example.
 
-We must now dismantle case-specific branches that substitute predetermined reactions for understanding. Another exception for a specialty, column, date or phrasing would preserve the failure under a different test.
+The runtime needs general mechanisms for retaining observations, relating contributions and identifying unresolved meaning. Safety, permissions and execution remain deterministic boundaries. The meaning of future questions cannot be enumerated in conditional code.
 
-The reusable responsibilities are to preserve the question's meaning, retain useful local findings, connect related evidence and identify what remains unknown. Their content must come from the current task and observations, not from an expanding catalogue of examples. Deterministic safety and execution boundaries remain; hard-coded interpretations are what must go.
+Today's progress is a tested separation of responsibilities: local models contribute meaning and evidence; the runtime integrates those contributions and determines completion. Semantic continuity and adaptive connection weights remain unfinished work.
 
-Today's outcome is therefore bounded but real: we demonstrated completion without a global LLM critic, and located the next failure in semantic interpretation and evidence assignment. We have not yet demonstrated generality throughout the system.
+The central result is this:
 
-The central lesson remains:
+> A model's ability to produce criticism is not evidence that criticism was needed.
 
-> Asking for criticism creates an obligation to produce criticism. That obligation is not evidence of an error.
-
-The runtime should integrate what its bubbles have established, act on specific missing knowledge, and stop when the task is covered. It should not keep asking a language model to invent reasons why the work cannot be finished.
+Giving it the job of finding objections makes objections an expected product. Completion must depend on what the cognitive bubbles have established, not on whether another LLM can invent a reason to keep going.
 
 
 ## 2026-09-05 — Safe because it does not work
