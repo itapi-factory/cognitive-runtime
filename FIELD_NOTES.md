@@ -1,251 +1,74 @@
 ## 2026-09-06 — Criticism Is Unnecessary Because It Is Inevitable
 
-Today began with what looked like a failed database question.
+Today's result was not a collection of fixes for a question about cardiology. It was a change in how the runtime decides whether its work is complete.
 
-The user asked a simple and useful question: which hospital has the longest queue for a cardiologist? The answer should include not only the department, but above all the hospital and its location.
+GAARD could discover useful facts, prepare data and return evidence. Radar could still prevent those findings from becoming an answer. We had placed an LLM critic between discovery and completion and instructed it to find what was wrong.
 
-GAARD did not simply fail to find data. In fact, it found quite a lot. It discovered cardiology-related service categories, executed ranking queries, connected the winning value to a provider and facility, and produced evidence that could be independently rerun. Yet Radar refused the answer.
+It did exactly that.
 
-The first technical cause was embarrassingly ordinary. GAARD returned a result truncated to its configured limit of 1,000 rows. Radar independently executed the same SQL without applying the same limit and obtained 9,418 rows. It then compared both lists for exact equality:
+### Criticism as an operational imperative
 
-```text
-GAARD: 1,000 rows
-Radar: 9,418 rows
-Result: fatal mismatch
-```
+Ask an LLM “What is wrong with this answer?” and finding something wrong becomes its task. A possible objection is a successful response to that instruction, even when it does not identify an actual error.
 
-Nothing was wrong with the data. The verifier had compared two executions with different semantics.
+That is the imperative exposed today: the model is expected to produce criticism, and the runtime mistakes the fulfilment of that expectation for evidence that more work is necessary.
 
-That bug was easy to understand and relatively easy to fix. The more interesting failure happened one layer above it.
+In our traces, a result established across several queries was challenged because the final query did not repeat the entire calculation. The objection introduced another investigation, another assumption and another opportunity to lose the meaning of the original task.
 
-## The system had an answer and talked itself out of it
+The problem was not merely excessive confidence in one critic. Our first revision removed its formal veto and made its opinion one weighted signal among others. Yet its objection still directed the investigation. Reducing its authority did not remove the imperative that produced the objection.
 
-GAARD had used one query to establish a maximum and another query to identify the provider associated with that value. A human looking at the evidence sees a perfectly normal analytical chain:
+The conclusion concerns open-ended criticism as a completion mechanism, not verification itself. We still need reproducible execution, evidence and checks against concrete requirements. What we do not need is another invitation to invent a reason not to finish.
 
-```text
-query A establishes the maximum
-query B identifies the owner of that maximum
-therefore the answer is supported
-```
+### Bubbles instead of a judge
 
-The critic saw something else:
+We developed the idea of a runtime composed of small cognitive “bubbles”.
 
-```text
-the final lookup query does not calculate the maximum by itself
-therefore the answer may not be sufficiently proven
-```
+A bubble need not contain an entire process or represent an autonomous agent. It can express one useful result: a short statement, a numerical assessment, a limitation and a reference to the observation that supports it.
 
-This was technically defensible and practically destructive.
+Its contribution is local. A discovered dictionary mapping does not have to name the hospital and calculate the final ranking. It has to resolve the particular uncertainty it addresses.
 
-The critic ignored the accumulated evidence and evaluated the final SQL as if it were required to reproduce the entire investigation in one statement. Its objection triggered another investigation. That investigation introduced a new temporal assumption, selected the global maximum observation date, encountered rows in which the relevant measure was null, and eventually caused the system to reject an answer it had already found.
+The emerging model has weighted inputs, a goal that gives those inputs meaning, an integrator and an activation condition. The purpose is to combine small contributions into a decision, without asking another LLM to judge the whole answer.
 
-At first, the obvious response was to make the critic less powerful. We replaced its veto with a network of cognitive signals. Each component could emit a short statement, a confidence value, a criticism or limitation, and references to evidence. An integrator would see the whole chain rather than obeying one adversarial opinion.
+This also changes the place of GAARD's Business Logic discoveries. A finding should be usable as supported working knowledge within an investigation without automatically becoming a permanent global rule. Rejecting it because it does not answer the entire user question destroys precisely the intermediate knowledge the next step needs.
 
-This was an improvement, but it did not yet remove the underlying error. The critic no longer had a formal veto, yet its doubt still dominated the next action. It had become one weighted input among several, but it was still being asked to search for a problem.
+The intended learning mechanism is adaptation of connection weights from observed usefulness. That remains a direction, not an accomplished result. Today's work did not demonstrate a self-learning network, and an LLM's declared confidence is not a calibrated probability.
 
-That question itself was the mistake.
+### What actually worked
 
-## An LLM asked for doubt will produce doubt
+The next implementation moved the completion decision out of the global critic altogether.
 
-A language model asked, “What could be wrong with this answer?” will almost always find something.
+An LLM decomposes the current question into atomic success criteria. Small semantic assessments connect evidence to those criteria. The integrator then calculates weighted coverage deterministically. Further investigation must address an identified gap, not an unrestricted objection.
 
-This is not evidence that a problem exists. It is evidence that the model is following its instruction.
+In the final reported run, the first investigation reached a score of 0.8. A specific criterion remained unsupported: that the selected value was the maximum. The next investigation supplied that evidence, the score reached 1.0, and Radar answered.
 
-The distinction matters. A critic is not passively detecting an objective defect. It is generating the most plausible continuation under a critical role. Even a strong answer can always be challenged:
+The global critic did not intervene. Earlier evidence remained available. The additional investigation addressed the recorded gap instead of introducing a new requirement.
 
-- the final query could be written differently;
-- a newer period might exist;
-- another interpretation might be possible;
-- an intermediate value could be recalculated;
-- the evidence could be presented more elegantly;
-- one more verification might increase confidence.
+That is the demonstrated gain: completion became an inspectable consequence of accumulated contributions. It no longer depended on a model deciding that it had run out of things to criticize.
 
-Every new investigation produces more observations. Every new observation creates more possible qualifications. A system organized around the elimination of all possible doubt does not converge. It expands the surface on which doubt can be generated.
+### What did not work
 
-This is the model's inner imperative: when assigned the role of critic, it must criticize. The absence of a material defect does not terminate the role. It merely forces the criticism to become more subtle.
+The final answer was still semantically wrong.
 
-The conclusion from today's work is therefore stronger than “the critic should have a lower weight.”
+During interpretation, the system silently narrowed “the longest queue” to a particular forecast waiting-time measure. It also expanded the service selection to include cardiac rehabilitation. It then assembled valid database results for that altered question.
 
-**The global critic is unnecessary because criticism is inevitable.**
+The integrator correctly calculated coverage for incorrectly grounded criteria.
 
-Uncertainty, conflict and limitation already appear naturally in every meaningful component. We do not need a privileged agent whose purpose is to invent them.
+This matters because a score of 1.0 means that the represented requirements are covered. It does not mean that the representation preserved the user's intent. Deterministic arithmetic cannot make its semantic inputs correct.
 
-## From judgment to accounting
+The same failure appeared earlier when relevant dictionary candidates were discarded for not containing the whole answer. Local discoveries were still being judged against a global goal. The bubble principle had reached the completion mechanism, but not every part of the runtime.
 
-The replacement is not another judge. It is a deterministic accounting mechanism.
+### The remaining work is generalization
 
-The user's question is first decomposed into a dynamic set of atomic success criteria. For example:
+We must now dismantle case-specific branches that substitute predetermined reactions for understanding. Another exception for a specialty, column, date or phrasing would preserve the failure under a different test.
 
-1. identify the relevant service;
-2. establish the value that determines the result;
-3. associate that value with a hospital;
-4. provide the requested department;
-5. provide the requested location;
-6. establish the applicable data period.
+The reusable responsibilities are to preserve the question's meaning, retain useful local findings, connect related evidence and identify what remains unknown. Their content must come from the current task and observations, not from an expanding catalogue of examples. Deterministic safety and execution boundaries remain; hard-coded interpretations are what must go.
 
-The exact criteria are not hard-coded. Another question—such as which departments experienced the largest increase in waiting time over six months—must produce a different card. The runtime knows nothing about cardiology, hospitals or time series. It knows only that a question produced a set of requirements, that the requirements carry weights, and that evidence may or may not cover them.
+Today's outcome is therefore bounded but real: we demonstrated completion without a global LLM critic, and located the next failure in semantic interpretation and evidence assignment. We have not yet demonstrated generality throughout the system.
 
-Each useful result is then reduced to an atomic statement:
+The central lesson remains:
 
-```json
-{
-  "criterion_id": "c3",
-  "statement": "The provider associated with the selected result was identified.",
-  "value": "Wojskowy Instytut Medyczny – PIB",
-  "coverage": 1.0,
-  "confidence": 0.98,
-  "evidence_refs": ["query:164"]
-}
-```
+> Asking for criticism creates an obligation to produce criticism. That obligation is not evidence of an error.
 
-The integrator does not ask whether this looks convincing. It calculates whether the required criteria are covered by material evidence:
-
-```text
-score = Σ(weight × coverage × evidence quality × effective confidence)
-```
-
-If every required criterion is sufficiently covered, the answer is released. If something is missing, the next investigation must be derived from that exact gap. There is no open invitation to invent a new concern.
-
-A criticism may still exist, but it has to become an atomic, evidence-bearing claim. “The SQL could be better” is a diagnostic note. It cannot block an answer. “Another verified record in the same comparison has a larger value” is a material contradiction. It can block the affected criterion because it points to actual evidence.
-
-This shift matters: the system no longer tries to prove that no objection can be imagined. It proves that the requirements of the question have been covered.
-
-## The first success exposed the next failure
-
-After removing the global critic from the termination path, Radar finally completed the cardiology question instead of rejecting it.
-
-Mechanically, the new runtime behaved as designed:
-
-- it created a goal card;
-- GAARD supplied evidence;
-- the deterministic integrator calculated 0.8 coverage;
-- one specific gap remained: evidence that the selected value was the maximum;
-- a second investigation addressed only that gap;
-- the score reached 1.0;
-- the answer was released without a global critic reopening the case.
-
-This was an important success.
-
-The answer was also semantically wrong.
-
-Radar had transformed the Polish phrase *najdłuższa kolejka*—the longest queue—into “the longest wait time.” GAARD narrowed it further to `forecast_waiting_days`, the predicted time until the first available appointment. It then used a broad text filter matching every service name containing “kardiolog,” which included cardiac rehabilitation. The resulting answer reported 30 days for a cardiac rehabilitation department in Legionowo.
-
-The database contained at least three different defensible values:
-
-- 352 for the largest number of waiting patients;
-- 246 for the largest provider-reported average waiting time;
-- 30 for the largest forecast waiting time in a broader set that included rehabilitation.
-
-These are valid answers to three different questions.
-
-The system confidently answered the third question. The human had asked the first.
-
-The deterministic integrator had made no arithmetic mistake. It had perfectly verified a coherent evidence chain for a meaning that had silently drifted away from the original words.
-
-## Determinism cannot repair lost meaning
-
-This failure clarified the next architectural boundary.
-
-A flat checklist is not enough. It can confirm that a hospital, value, department, location and maximum were all found, while failing to preserve what was being maximized and what “cardiologist” meant in the user's question.
-
-The runtime needs semantic continuity from the original phrase to the final field and record.
-
-That does not mean introducing a permanent domain ontology into Radar. We must not add fixed fields for hospitals, waiting times, medical specialties or observation policies. Such a schema would solve today's question and constrain tomorrow's.
-
-Instead, the goal representation must preserve the user's original semantic anchors:
-
-```json
-{
-  "source_text": "kolejka",
-  "resolved_meaning": null,
-  "status": "unresolved"
-}
-```
-
-The available data may then reveal several candidate meanings:
-
-```text
-waiting_patient_count
-provider_average_waiting_days
-forecast_waiting_days
-```
-
-If those interpretations lead to materially different answers, the system must not silently select one. It must either ground the choice in evidence and language, present the alternatives, or ask the user to clarify.
-
-The same principle applies to “do kardiologa.” Radar's candidate search had already found precise categories such as `ODDZIAŁ KARDIOLOGICZNY` and `ODDZIAŁ KARDIOLOGICZNY DLA DZIECI`. Yet the resolver discarded them because those dictionary records did not also contain the hospital and queue length.
-
-That was the same category error at an earlier stage. A dictionary finding does not need to answer the whole question. It only needs to resolve its local uncertainty. By discarding it, Radar sent GAARD no confirmed data references, and GAARD fell back to the much broader `LIKE '%kardiolog%'`.
-
-Useful local knowledge was found, then rejected for not being a complete global answer.
-
-## What changed today
-
-Today's work produced several concrete improvements:
-
-- independent SQL verification now understands truncated results instead of treating 1,000 and 9,418 rows as contradictory;
-- a failed supporting query no longer destroys previously confirmed evidence;
-- later iterations no longer automatically erase an earlier valid candidate;
-- criticism is represented as a signal rather than a veto;
-- Business Logic findings can be evaluated for temporary use within an investigation without becoming globally enabled rules;
-- the global critic was removed from the normal completion decision;
-- the answer decision is now calculated from a weighted goal card and evidence coverage;
-- a continuation must point to a specific missing criterion;
-- technical JSON variations can be normalized without repeatedly calling an LLM;
-- the runtime completed a case that previously collapsed into self-rejection.
-
-Just as importantly, the successful mechanics exposed the next problem cleanly:
-
-- semantic interpretation can drift before evidence accounting begins;
-- input references, analytical operations and requested outputs are still confused during grounding;
-- useful dictionary candidates can be discarded because they do not contain the final result;
-- independent criterion values can form a complete-looking but semantically incoherent answer;
-- verified SQL proves that a query returned a value, not that the query represents the user's meaning.
-
-This is progress. A failure that moves from uncontrolled orchestration to a precise semantic boundary is a much better failure.
-
-## The emerging runtime
-
-The architecture emerging from this work is not a traditional agent workflow and not a chain of increasingly skeptical judges.
-
-It is a network of small cognitive units. Each unit contributes a compact statement, confidence, limitation and evidence. A dynamic goal card defines what must be established. A deterministic integrator measures coverage. Investigation continues only where knowledge is missing. Previously verified knowledge remains available unless material contradictory evidence appears.
-
-No single LLM decides whether the whole answer is good.
-
-The LLMs perform the work they are good at:
-
-- understanding language;
-- proposing semantic decompositions;
-- mapping observations to local questions;
-- formulating concise findings;
-- interpreting evidence within a bounded responsibility.
-
-The runtime performs the work that must remain governable:
-
-- preserving state;
-- tracking provenance;
-- normalizing weights;
-- calculating coverage;
-- enforcing completion thresholds;
-- preventing speculative objections from becoming obligations;
-- ensuring that later steps cannot silently erase earlier knowledge.
-
-The next step is to preserve semantic identity through that structure: from the exact words used by the user, through candidate meanings and database fields, to one coherent answer candidate. The integrator must calculate completeness for that candidate, not assemble unrelated values merely because each fills a box.
-
-## Final note
-
-The most useful lesson today was not that criticism is bad. Criticism is everywhere.
-
-Every uncertain mapping contains criticism. Every confidence below one contains criticism. Every limitation attached to a finding contains criticism. Every material contradiction in evidence contains criticism. Every uncovered criterion is already a precise criticism of the current answer.
-
-A dedicated global critic adds little information. What it adds is pressure to continue.
-
-That pressure is dangerous because a language model can always satisfy it. There is always another possible doubt, another reformulation, another query, another interpretation and another way to demand a stronger proof.
-
-A governable cognitive runtime should not ask a model when it feels satisfied. It should know what the user asked, know which parts have been established, know what evidence supports them, and stop when the defined work is complete.
-
-Criticism does not need a special seat at the table.
-
-It is already present in every empty chair.
+The runtime should integrate what its bubbles have established, act on specific missing knowledge, and stop when the task is covered. It should not keep asking a language model to invent reasons why the work cannot be finished.
 
 
 ## 2026-09-05 — Safe because it does not work
