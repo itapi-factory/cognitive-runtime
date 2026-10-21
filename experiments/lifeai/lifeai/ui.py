@@ -314,9 +314,9 @@ class App:
             listener = sim.controllers.get(agent.talk_target)
             name = listener.agent.name if listener else "inna istota"
             reply = sim.last_prompt.get("reply_to")
-            self.wrapped(f"{'Odpowiadam' if reply else 'Mówię'} do: {name}", 884, 326, 508, BLUE, 22, 2)
+            self.wrapped(f"Czat · {'odpowiadam' if reply else 'piszę'} do: {name}", 884, 326, 508, BLUE, 22, 2)
             self.wrapped(('Usłyszana kwestia: „' + reply['text'] + '”') if reply else
-                         "Przekazuję przeżycia i pytania własnymi słowami. Po wypowiedzi oddam kolej rozmówcy.",
+                         "Przekazuję przeżycia i pytania na odległość. Czat działa na całej arenie.",
                          884, 399, 508, MUTED, 18, 4)
             return
         self.wrapped(agent.goal, 884, 325, 508, TEXT, 21, 2)

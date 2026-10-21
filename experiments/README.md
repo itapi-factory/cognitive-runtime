@@ -6,7 +6,7 @@ Working experiments exploring the cognitive runtime architecture. Each experimen
 
 [LifeAI](lifeai/README.md) is a Python/Pygame simulation of embodied agents in a continuous 2D world. A local OpenAI-compatible LLM selects intentions and predictions; deterministic motor systems execute movement, eating and pushing while cognition runs asynchronously.
 
-Agents maintain bounded narrative memory, exchange experiences through dialogue, compare predictions with measured outcomes and revisit them during sleep. Life, cognition, speech, movement and memory consolidation consume energy. Death erases the agent's memory while observer journals remain available. Visible dead agents are recognized as unavailable conversation partners without revealing their cause of death.
+Agents maintain bounded narrative memory, exchange experiences through arena-wide remote chat, compare predictions with measured outcomes and revisit them during sleep. Life, cognition, speech, movement and memory consolidation consume energy. Death erases the agent's memory while observer journals remain available. The chat roster exposes only participant names and IDs, never their location or private memory. Messages cross obstacles and reach sleeping agents without waking them. Visible dead agents are recognized as unavailable conversation partners without revealing their cause of death.
 
 ### Run
 

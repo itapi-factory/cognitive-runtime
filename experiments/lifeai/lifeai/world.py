@@ -6,7 +6,6 @@ import random
 from dataclasses import dataclass, replace
 from enum import IntEnum, StrEnum
 from typing import TYPE_CHECKING
-from .conversation import TALK_RANGE
 if TYPE_CHECKING:
     from .agent import Agent
 
@@ -241,18 +240,10 @@ class World:
                     obj.id, obj.radius, obj.alive if body else None))
         return sorted(visible, key=lambda o: (math.dist(agent.position, o.position), o.id))
 
-    def can_address(self, speaker, listener):
-        return (speaker.alive and listener.alive and speaker.id != listener.id and
-                math.dist(speaker.position, listener.position) <= TALK_RANGE and
-                self.point_visible(speaker, listener.position, excluding=(listener.id,)))
-
     def can_talk(self, speaker, listener):
-        return listener.alive and self.can_address(speaker, listener)
-
-    def can_hear(self, speaker, listener):
+        """Arena-wide chat eligibility; vision and physical geometry are unrelated."""
         return (speaker.alive and listener.alive and speaker.id != listener.id and
-                math.dist(speaker.position, listener.position) <= TALK_RANGE and
-                self.line_of_sight(speaker.position, listener.position, (speaker.id, listener.id)))
+                self.entities.get(speaker.id) is speaker and self.entities.get(listener.id) is listener)
 
     def push(self, actor, target_id, distance):
         target = self.objects.get(target_id) or self.entities.get(target_id)

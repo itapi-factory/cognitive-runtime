@@ -5,7 +5,7 @@ from collections import deque
 import math
 
 from .brain import Plan
-from .conversation import Dialogue, TALK_RANGE
+from .conversation import Dialogue
 from .energy import ENERGY
 from .memory import Memory
 from .world import BODY_RADIUS, Direction, Heading, Position, SeenObject, World
@@ -131,9 +131,8 @@ class Agent:
                     self.death_notice = f"Widzę: martwa istota {item.name}. Nie może już odpowiedzieć. Przyczyny śmierci nie znam."
                 self.experience.recognize_dead(item.id, item.name)
         self.conversation_partners = [
-            {"id": a.id, "name": a.name, "position": list(a.position)}
-            for a in world.entities.values() if world.can_address(self, a) or
-            (self.dialogue.recent_contact(a.id) and world.can_hear(self, a))
+            {"id": a.id, "name": a.name}
+            for a in world.entities.values() if world.can_talk(self, a)
         ]
         if remember:
             for item in self.visible:
@@ -230,7 +229,7 @@ class Agent:
                 for c in self.visible
             ],
             "conversation": {
-                "range_m": TALK_RANGE, "partners": list(self.conversation_partners),
+                "channel": "chat", "scope": "arena", "partners": list(self.conversation_partners),
                 "only_narrative": True, "dump_forbidden": True,
                 "heard_stories_are_unverified": True,
                 **self.dialogue.snapshot(),

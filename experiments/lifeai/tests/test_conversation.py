@@ -121,25 +121,45 @@ class ConversationTests(unittest.TestCase):
         self.listener._handle_death()
         self.assertEqual(self.listener.agent.memory.context(), "")
 
-    def test_physical_contact_and_awake_listener_are_rechecked_at_delivery(self):
-        for scenario in ("distant", "behind", "rock", "sleeping", "dead"):
+    def test_chat_delivery_ignores_distance_orientation_obstacles_and_sleep(self):
+        for scenario in ("distant", "behind", "rock", "sleeping"):
             with self.subTest(scenario=scenario):
+                self.sim.agent.memory = Memory()
+                self.listener.agent.memory = Memory()
                 self.listener.agent.position = (14, 10)
                 self.sim.world.objects.clear()
                 self.listener.phase = "observe"
                 if scenario == "distant":
-                    self.listener.agent.position = (18, 10)
+                    self.listener.agent.position = (23, 19)
                 elif scenario == "behind":
                     self.listener.agent.position = (11, 10)
                 elif scenario == "rock":
                     self.sim.world.add_object("rock", (13,10))
                 elif scenario == "sleeping":
                     self.listener.phase = "sleeping"
-                else:
-                    self.listener.agent.die()
+                position, facing = self.sim.agent.position, self.sim.agent.facing
+                before = self.sim.conversations
                 self.sim._deliver_story(STORY)
-                self.assertFalse(self.heard_stories())
-                self.assertEqual(self.sim.conversations, 0)
+                self.assertEqual(self.heard_stories()[0].text, STORY)
+                self.assertEqual(self.sim.conversations, before + 1)
+                self.assertEqual(self.sim.agent.position, position)
+                self.assertEqual(self.sim.agent.facing, facing)
+                if scenario == 'sleeping':
+                    self.assertEqual(self.listener.phase, 'sleeping')
+
+    def test_remote_chat_cannot_deliver_to_missing_or_dead_participant(self):
+        self.listener.agent.position = (23, 19)
+        removed = self.sim.world.entities.pop(self.listener.agent.id)
+        self.sim._deliver_story(STORY)
+        self.assertFalse(self.heard_stories())
+        self.sim.world.entities[self.listener.agent.id] = removed
+        self.listener.agent.die('HIDDEN_CAUSE')
+        self.listener._handle_death()
+        self.sim._deliver_story(STORY)
+        self.assertFalse(self.heard_stories())
+        self.assertEqual(self.sim.conversations, 0)
+        self.assertIn('niedostępny na czacie', self.sim.agent.last_result)
+        self.assertNotIn('martwa', self.sim.agent.memory.context())
 
     def test_speaker_must_survive_delivery_and_listener_must_afford_listening(self):
         self.sim.agent.energy = ENERGY.speech_cost(STORY)

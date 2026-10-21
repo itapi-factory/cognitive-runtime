@@ -109,9 +109,8 @@ class DialogueTests(unittest.TestCase):
         self.assertIn(QUESTION, render_context(self.other.last_prompt))
         self.assertIsNotNone(self.other.agent.motor)
 
-    def test_listener_can_answer_from_hearing_without_facing_speaker(self):
+    def test_listener_can_answer_on_chat_without_facing_speaker(self):
         self.other.agent.facing = Heading(0)
-        self.assertFalse(self.sim.world.can_address(self.other.agent, self.sim.agent))
         self.ask()
         snapshot = self.other._snapshot()
         self.assertIn(self.sim.agent.id, [p['id'] for p in snapshot['conversation']['partners']])
@@ -124,18 +123,66 @@ class DialogueTests(unittest.TestCase):
         self.assertEqual(self.sim.agent.dialogue.incoming().text, 'Nie wiem.')
         self.assertEqual(float(self.other.agent.facing), 0)
 
-    def test_recent_contact_does_not_allow_speech_through_rock_or_at_distance(self):
+    def test_chat_continues_after_relocation_and_through_rock(self):
         self.ask()
-        rock = self.sim.world.add_object('rock', (4, 7))
-        self.assertIsNone(self.other._speech_target(self.sim.agent.id))
-        del self.sim.world.objects[rock.id]
+        self.sim.world.add_object('rock', (4, 7))
+        self.assertIs(self.other._speech_target(self.sim.agent.id), self.sim.agent)
         self.sim.agent.position = (10, 12)
-        self.assertIsNone(self.other._speech_target(self.sim.agent.id))
+        self.assertIs(self.other._speech_target(self.sim.agent.id), self.sim.agent)
+        self.other._deliver_story(ANSWER)
+        self.assertEqual(self.sim.agent.dialogue.incoming().text, ANSWER)
+        self.assertIsNone(self.sim.agent.dialogue.waiting(self.other.agent.id))
 
-    def test_unseen_unknown_being_is_not_discovered_through_dialogue(self):
+    def test_chat_roster_lists_unseen_identities_without_physical_or_private_information(self):
         self.other.agent.facing = Heading(0)
+        self.sim.agent.memory.remember(1, 'PRIVATE_EPISODE', 1)
         snapshot = self.other._snapshot()
-        self.assertNotIn(self.sim.agent.id, [p['id'] for p in snapshot['conversation']['partners']])
+        self.assertEqual(snapshot['conversation']['partners'], [{'id': self.sim.agent.id, 'name': 'Ada'}])
+        self.assertFalse(any(c['id'] == self.sim.agent.id for c in snapshot['perception']))
+        self.assertIsNone(self.other.agent.known_target(self.sim.agent.id))
+        self.assertNotIn('PRIVATE_EPISODE', render_context(snapshot))
+        self.assertEqual(snapshot['conversation']['channel'], 'chat')
+
+    def test_message_arriving_during_sleep_survives_consolidation_and_can_be_answered(self):
+        self.other._submit('sleep')
+        future = self.other.pending
+        future.result(timeout=2)
+        question = self.ask()
+        self.assertIs(self.other.pending, future)
+        self.assertEqual(self.other.phase, 'sleeping')
+        self.other._receive(0)
+        self.assertEqual(self.other.agent.dialogue.incoming().text, QUESTION)
+        self.assertLessEqual(self.other.agent.memory.used, self.other.agent.memory.budget)
+        self.other._deliver_story(ANSWER)
+        self.assertEqual(question.utterance['state'], 'answered')
+        self.assertEqual(self.sim.agent.dialogue.incoming().text, ANSWER)
+
+    def test_unavailable_peer_closes_incoming_and_cancels_wait_without_remote_death_diagnosis(self):
+        question = self.ask()
+        self.other.agent.start_command({'action': 'wait', 'seconds': 10})
+        self.other.agent.plan.append({'action': 'talk'})
+        self.sim.agent.position = (10, 12)
+        self.sim.agent.die('HIDDEN_CAUSE')
+        self.sim._handle_death()
+        self.other.phase = 'error'  # isolate contact change from new reasoning
+        self.other._update_behavior(0)
+        self.assertEqual(question.utterance['state'], 'lost_contact')
+        self.assertIsNone(self.other.agent.dialogue.incoming())
+        self.assertIsNone(self.other.agent.motor)
+        self.assertFalse(self.other.agent.plan)
+        self.assertIn(QUESTION, self.other.agent.memory.context())
+        self.assertNotIn('martwa', self.other.agent.memory.context())
+        self.assertNotIn('HIDDEN_CAUSE', self.other.agent.memory.context())
+
+    def test_sleeping_receiver_stays_connected_while_sender_can_walk(self):
+        self.ask()
+        self.other.phase = 'sleeping'
+        self.sim.agent.start_command({'action': 'go_to', 'position': [3, 10]})
+        self.sim.phase = 'error'  # isolate physical lane and expiry
+        motor = self.sim.agent.motor
+        self.sim._update_behavior(0)
+        self.assertIsNotNone(self.sim.agent.dialogue.waiting(self.other.agent.id))
+        self.assertIs(self.sim.agent.motor, motor)
 
     def test_simultaneous_intentions_take_turns_without_cancelling_workers(self):
         with patch.object(self.sim.brain, 'narrate', return_value=QUESTION), \

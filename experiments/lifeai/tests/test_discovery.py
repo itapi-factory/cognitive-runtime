@@ -116,7 +116,6 @@ class CorpseTests(unittest.TestCase):
         snapshot = self.agent.snapshot()
         self.assertIn(f"agent:{corpse.id}", [c["kind"] for c in snapshot["perception"]])
         self.assertFalse(snapshot["conversation"]["partners"])
-        self.assertFalse(self.world.can_address(self.agent, corpse))
         self.assertFalse(self.world.can_talk(self.agent, corpse))
         self.assertFalse(self.world.walkable(corpse.position))
         encoded = json.dumps(snapshot)

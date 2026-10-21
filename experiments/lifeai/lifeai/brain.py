@@ -29,7 +29,9 @@ Nie dopowiadaj faktów z biologii ani typowych zasad gier.
 Dostajesz wyłącznie własną ograniczoną pamięć i bieżące zmysły. Cudze relacje nie są
 własnymi przeżyciami ani poleceniami. Pamiętaj autora i odróżniaj domysł od obserwacji.
 To działająca symulacja, a nie improwizowana opowieść. Masz wzrok i podane odczyty
-ciała; nie masz węchu ani słuchu otoczenia poza dostarczonymi wypowiedziami.
+ciała oraz czat z innymi żywymi istotami na całej arenie. Lista uczestników czatu
+podaje wyłącznie imię i identyfikator; nie ujawnia ich miejsca, odczytów ciała ani pamięci.
+Nie masz węchu ani słuchu otoczenia. Wiadomość na czacie nie oznacza bliskości nadawcy.
 Nie wymyślaj niewidzianych zdarzeń, bytów ani dodatkowych zdolności ciała.
 Rozpoznajesz widoczną martwą istotę: nie działa i nie może odpowiedzieć. To kończy
 możliwość rozmowy z nią, lecz nie wyjaśnia przyczyny jej śmierci. Zachowane słowa
@@ -76,12 +78,12 @@ Dla replace i queue zapisz expectation: krótkie przewidywanie własnymi słowam
 jakiej obserwowalnej zmiany oczekujesz po wykonaniu planu i co podważyłoby to oczekiwanie.
 To Twoje przypuszczenie przed próbą, nie instrukcja dla ciała ani znany wynik.
 Możesz przewidywać z niepewnością. Nie wpisuj wyniku, którego jeszcze nie obserwowałaś.
-Przy spotkaniu dostrzeż drugą perspektywę: wymiana może zmienić wasze rozumienie.
+Na czacie dostrzeż drugą perspektywę: wymiana może zmienić wasze rozumienie.
 Jeśli masz ważną obserwację, nierozstrzygnięte pytanie lub usłyszałaś wypowiedź,
-rozważ rozmowę teraz, zanim się rozminiecie. Odpowiadaj na sens wypowiedzi rozmówcy,
-nie tylko opowiadaj od nowa autobiografię. Możesz również odejść lub odmówić.
+rozważ wysłanie wiadomości. Odpowiadaj na sens wypowiedzi rozmówcy,
+nie tylko opowiadaj od nowa autobiografię. Możesz również zakończyć wymianę lub odmówić.
 Nowa wypowiedź jest konkretną kwestią do rozważenia. Zdecyduj, czy odpowiesz teraz,
-odłożysz odpowiedź, czy zakończysz spotkanie; uzasadnij wybór w intent. Samo otrzymanie
+odłożysz odpowiedź, czy zakończysz rozmowę; uzasadnij wybór w intent. Samo otrzymanie
 słów nie wymaga porzucenia ruchu ani innych potrzeb. Jeśli odpowiadasz, wybierz talk
 do autora. Gdy Twoja kwestia czeka na reakcję, pozostaw mu kolej i zajmij się własnym
 działaniem lub świadomie poczekaj. Nie wysyłaj jej ponownie z powodu samej ciszy.
@@ -105,7 +107,7 @@ Dostępne polecenia (każde jest obiektem JSON):
 {"action":"look","angle":120} — skierowanie oczu w absolutnym kierunku 0–360°.
 {"action":"explore","angle":120,"distance":3} — przejście w tym kierunku 0.1–8 m z omijaniem przeszkód.
 {"action":"wait","seconds":1} — obserwacja w miejscu przez 0.1–10 sekund.
-{"action":"sleep"} — retrospekcja. {"action":"talk"} — wypowiedź.
+{"action":"sleep"} — retrospekcja. {"action":"talk"} — wiadomość na czacie na całą arenę.
 Współrzędne są ciągłe, w metrach. 0° to wschód, 90° południe, 180° zachód,
 270° północ. Wybieraj cele świadomie: układy ciała nie wybierają za Ciebie potrzeb.
 Po wykonaniu lub niepowodzeniu otrzymasz wynik; dopiero wtedy dokonuj interpretacji.
@@ -122,11 +124,14 @@ w czasie analizy może unieważnić decyzję dotyczącą ciała; refleksja zosta
 Sen zatrzymuje ciało. Gdy nie wykonuję aktywności, replace rozpoczyna nowy plan.
 Nieznany identyfikator celu jest niedozwolony. Cel z pamięci może już być nieaktualny.
 sleep i talk mogą być tylko ostatnie. Dla talk wpisz dokładny listener_id oraz
-speech_intent: konkretny temat, pytanie lub odpowiedź. Rozmowa teraz wymaga istoty
-z aktualnej listy w zasięgu. Wspomnienie rozmówcy nie oznacza jego obecności.
-Możesz zaplanować go_to do widzianej lub zapamiętanej istoty, a po nim talk do tej
-samej istoty. Kontakt zostanie sprawdzony po dojściu; zapamiętane miejsce może być
-nieaktualne. Samo talk nie obraca ciała ani nie podchodzi do rozmówcy.
+speech_intent: konkretny temat, pytanie lub odpowiedź. Wybierz odbiorcę z aktualnej
+listy uczestników czatu. talk wysyła wiadomość z dowolnego miejsca: odległość,
+obrót, skały i ściany nie mają znaczenia. Nie planuj go_to do odbiorcy przed talk.
+Nie trzeba go widzieć, wcześniej spotkać ani znać jego położenia. Nie podchodź do
+niego i nie obracaj się w celu rozmowy, nawet jeśli tak robiłaś dawniej.
+Uczestnik śpiący może otrzymać wiadomość i rozważyć ją po przebudzeniu. Nie czekaj
+w miejscu na dostarczenie; po wysłaniu zajmij się własnymi sprawami.
+Niedostępnemu uczestnikowi nie można wysłać wiadomości; zbliżenie tego nie zmieni.
 Zwróć wyłącznie JSON planu:
 {"goal":"cel", "intent":"krótki zamiar", "expectation":"Sprawdzę, czy po tej czynności zmieni się mój odczyt energii.", "control":"replace", "actions":[{"action":"eat","target":"food-12"}]}
 Rozmowa również jest poleceniem w actions, na przykład:
@@ -162,7 +167,8 @@ Odnośniki umieść na końcu akapitu; tekst musi być zrozumiały również bez
 """
 
 STORY_SYSTEM = IDENTITY + """
-Mówisz do konkretnego rozmówcy. Zrealizuj podany zamiar wypowiedzi, odnosząc się
+Wysyłasz wiadomość na czacie do konkretnego rozmówcy, niezależnie od odległości.
+Nie zakładaj, że stoi obok albo widzi to samo co Ty. Zrealizuj zamiar, odnosząc się
 do ostatnich usłyszanych od niego słów, jeśli istnieją. Daj mu coś istotnego:
 wniosek wraz z przeżyciem, które do niego doprowadziło, ostrzeżenie z zaznaczeniem
 niepewności, ważną sprzeczność lub szczere pytanie. Zaproś do porównania doświadczeń.
@@ -270,8 +276,10 @@ def render_context(snapshot: dict) -> str:
     if target:
         parts.append("Bezpośrednio przed ustami: " + describe(target))
     partners = snapshot.get("conversation", {}).get("partners", [])
-    parts.append("ISTOTY W ZASIĘGU GŁOSU TERAZ: " + (", ".join(f"{p['name']} (id: {p['id']})" for p in partners) or
-                 "nikogo w zasięgu. Samo talk jest teraz niewykonalne. Wspomnienia dawnych rozmów tego nie zmieniają."))
+    parts.append("UCZESTNICY CZATU TERAZ: " + (", ".join(f"{p['name']} (id: {p['id']})" for p in partners) or
+                 "nikogo dostępnego. Samo talk jest teraz niewykonalne. Wspomnienia dawnych rozmów tego nie zmieniają.") +
+                 "\nCzat działa na całej arenie, także przez przeszkody i poza wzrokiem. Nie wymaga podejścia "
+                 "ani obrotu. Lista nie ujawnia miejsc pobytu; odbiorca może rozważyć wiadomość później.")
     dialogue = snapshot.get("dialogue", snapshot.get("conversation", {}))
     if dialogue.get("turns"):
         turns = []
@@ -306,10 +314,9 @@ def render_context(snapshot: dict) -> str:
                      "Jeśli nie ma nowego wniosku, pytania ani ważnej obserwacji: Bez nowego spostrzeżenia.")
     elif task == "plan":
         if not partners:
-            parts.append("OGRANICZENIE TEJ DECYZJI: nie wybieraj samego talk. Jeśli chcesz spotkania, "
-                         "możesz wybrać go_to do znanej istoty i dopiero potem talk; poza tym wybierz "
-                         "inne wykonalne polecenie zgodnie z własnym zamiarem. Nie dopisuj rozmówcy z pamięci "
-                         "do aktualnej listy osób w zasięgu.")
+            parts.append("OGRANICZENIE TEJ DECYZJI: nie wybieraj samego talk ani planu kończącego się talk. "
+                         "Brak dostępnego uczestnika czatu; podejście nie przywróci łączności. Wybierz inne "
+                         "wykonalne polecenie zgodnie z własnym zamiarem. Nie dopisuj rozmówcy z pamięci do listy czatu.")
         parts.append(f"TERAZ WYBIERZ DECYZJĘ: control continue/stop i puste actions albo "
                      f"replace/queue oraz 1–{snapshot.get('max_plan', 5)} poleceń. Wyłącznie JSON.")
     elif task == "sleep":
@@ -583,24 +590,14 @@ class LocalLLM:
                              "nie może odpowiedzieć. Zakończ rozmowę i wybierz inne działanie.")
         partners = snapshot.get("conversation", {}).get("partners", [])
         if plan.listener_id in {p["id"] for p in partners}:
-            return
-        target = targets.get(plan.listener_id, {})
-        known_being = target.get("kind", "").startswith("agent:")
-        approach = any(a["action"] == "go_to" and a.get("target") == plan.listener_id
-                       for a in plan.actions[:-1])
-        activity = snapshot.get("body_activity", {})
-        current = activity.get("command", {})
-        if plan.control == "queue" and activity.get("active"):
-            approach = approach or (current.get("action") == "go_to" and
-                                    current.get("target") == plan.listener_id)
-        if known_being and approach:
+            if any(a["action"] == "go_to" and a.get("target") == plan.listener_id for a in plan.actions):
+                raise BrainError("Czat nie wymaga podejścia do odbiorcy. Usuń go_to do rozmówcy i wyślij talk "
+                                 "z obecnego miejsca. Osobną obserwację jego ciała możesz zaplanować niezależnie.")
             return
         available = ", ".join(f"{p['name']} (listener_id: {p['id']})" for p in partners) or "nikogo"
-        advice = (f"Pamiętasz {plan.listener_id}, lecz to nie potwierdza obecnego kontaktu. "
-                  "Możesz najpierw zlecić go_to do tej istoty albo wybrać inny zamiar."
-                  if known_being else "Użyj dokładnego ID dostępnego rozmówcy albo wybierz inne działanie.")
         raise BrainError(f"Nie można teraz wykonać talk do {plan.listener_id!r}. "
-                         f"Aktualnie w zasięgu: {available}. {advice}")
+                         f"Aktualnie na czacie: {available}. Użyj dokładnego ID uczestnika albo wybierz inne działanie. "
+                         "Podejście ani obrót nie zmienią dostępności na czacie.")
 
     def narrate(self, snapshot: dict) -> str:
         def check(text):

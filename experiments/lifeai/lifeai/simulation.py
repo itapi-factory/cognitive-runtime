@@ -100,20 +100,15 @@ class Simulation:
 
     def _listener(self) -> Simulation | None:
         listener = self.controllers.get(self.agent.talk_target)
-        if (listener and listener.agent.alive and listener.phase != "sleeping"
-                and self._speech_target(listener.agent.id) is not None):
+        if listener and self._speech_target(listener.agent.id) is not None:
             return listener
         return None
 
     def _speech_target(self, identity: str) -> Agent | None:
         target = self.world.entities.get(identity)
-        if target is None or not target.alive or not (self.world.can_address(self.agent, target) or
-                (self.agent.dialogue.recent_contact(identity) and self.world.can_hear(self.agent, target))):
+        if (target is None or not self.world.can_talk(self.agent, target) or
+                identity not in self.controllers):
             return None
-        if target.alive:
-            controller = self.controllers.get(identity)
-            if controller is None or controller.phase == "sleeping":
-                return None
         return target
 
     def _refresh_senses(self, *, remember=False) -> None:
@@ -143,7 +138,7 @@ class Simulation:
         target = self.agent.known_target(self.agent.talk_target)
         if target and target.get("alive") is False:
             return f"{target.get('name', self.agent.talk_target)} to martwa istota. Rozmowa jest zakończona; nie oczekuję odpowiedzi."
-        return "Nie udało mi się utrzymać kontaktu z rozmówcą."
+        return "Rozmówca jest niedostępny na czacie. Nie znam przyczyny utraty kontaktu; podejście tego nie zmieni."
 
     def _snapshot(self) -> dict:
         self._refresh_senses(remember=True)
@@ -493,7 +488,7 @@ class Simulation:
         self.event("Próba wypowiedzi", story, "talk_pending", speaker_id=self.agent.id,
                    listener_id=self.agent.talk_target, speech_cost=ENERGY.speech_cost(story))
         if target is None:
-            self._talk_failed("Nie udało mi się utrzymać kontaktu z rozmówcą.")
+            self._talk_failed(self._contact_failure())
             return
         if not self.agent.spend_energy(ENERGY.speech_cost(story), "Brak energii na wypowiedzenie opowieści."):
             self._handle_death()
@@ -523,12 +518,14 @@ class Simulation:
         if listener.pending_kind == "plan":
             listener._dialogue_interrupt = True
         self.conversations += 1
-        self.agent.last_result = f"Zwróciłam się do {listener.agent.name}; czekam na reakcję."
+        self.agent.last_result = f"Wysłałam wiadomość na czacie do {listener.agent.name}; mogę działać dalej bez czekania w miejscu."
         self.agent.experience.outcome(self.agent.last_result + " Samo wypowiedzenie słów nie potwierdza oczekiwanej reakcji.")
         self.event(f"Do {listener.agent.name}", story, "talk", delivered=True, direction="sent",
+                   channel="chat",
                    speaker_id=self.agent.id, listener_id=listener.agent.id, listener_body=listener.body_state(),
                    message_id=message_id, in_reply_to=reply_to)
         listener.event(f"Od {self.agent.name}", story, "talk", delivered=True, direction="received",
+                       channel="chat",
                        speaker_id=self.agent.id, listener_id=listener.agent.id,
                        message_id=message_id, in_reply_to=reply_to)
         self.agent.plan.clear()
@@ -572,12 +569,20 @@ class Simulation:
         if self.phase != "sleeping":
             self._refresh_senses()
         def connected(peer):
-            target = self.world.entities.get(peer)
-            # Lost contact outside sight does not disclose a cause.
-            return target is not None and self.world.can_hear(self.agent, target)
+            return self._speech_target(peer) is not None
         for note in self.agent.dialogue.expire(connected):
             self.event("Stan rozmowy", dialogue_label(note.utterance), "dialogue",
                        message_id=note.utterance["id"], state=note.utterance["state"])
+            self.next_thought_lifetime = self.agent.lifetime_seconds
+            if note.utterance["state"] == "lost_contact":
+                if self.pending_kind == "plan":
+                    self._replan_after_request = True
+                if note.utterance["peer_id"] == self.agent.talk_target:
+                    if any(c["action"] == "talk" for c in self.agent.plan):
+                        self.agent.experience.skip_last_command(self._contact_failure())
+                        self.agent.plan = deque(c for c in self.agent.plan if c["action"] != "talk")
+                    if self.agent.motor and self.agent.motor.action == "wait":
+                        self._stop_body(self._contact_failure())
         # The physical lane runs even during inference, narration and API retries.
         # A requested sleep stops the body immediately; its reflection waits for
         # the single in-flight cognitive request to finish.

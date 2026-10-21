@@ -38,25 +38,29 @@ class ListenerPlanningTests(unittest.TestCase):
             return self.brain.plan(snapshot or self.snapshot)
 
     def test_unavailable_listener_feedback_names_rejected_id_and_actual_availability(self):
+        self.world.entities.pop(self.bruno.id)
+        self.ada.look(self.world)
         with self.assertRaises(PlanValidationError) as error:
-            self.decision(talk_plan())
+            self.decision(talk_plan(), self.ada.snapshot())
         self.assertIn('bruno-02', str(error.exception))
-        self.assertIn('Aktualnie w zasięgu: nikogo', str(error.exception))
-        self.assertIn('go_to', str(error.exception))
+        self.assertIn('Aktualnie na czacie: nikogo', str(error.exception))
+        self.assertIn('Podejście ani obrót nie zmienią dostępności', str(error.exception))
         self.assertEqual(error.exception.rejected_plan, talk_plan())
 
-    def test_explicit_approach_then_talk_to_remembered_being_is_valid(self):
-        commands = [{'action': 'go_to', 'target': self.bruno.id}]
-        plan = self.decision(talk_plan(prefix=commands))
-        self.assertEqual(plan.actions, commands + [{'action': 'talk'}])
+    def test_remote_chat_works_without_approach_and_redundant_approach_is_repaired(self):
+        plan = self.decision(talk_plan())
+        self.assertEqual(plan.actions, [{'action': 'talk'}])
         self.assertEqual(plan.listener_id, self.bruno.id)
+        commands = [{'action': 'go_to', 'target': self.bruno.id}]
+        with self.assertRaisesRegex(PlanValidationError, 'Czat nie wymaga podejścia'):
+            self.decision(talk_plan(prefix=commands))
 
-    def test_speech_parameters_inside_talk_preserve_explicit_approach(self):
-        data = talk_plan(prefix=[{'action': 'go_to', 'target': self.bruno.id}])
+    def test_speech_parameters_inside_talk_work_for_remote_chat(self):
+        data = talk_plan()
         for key in ('listener_id', 'speech_intent'):
             data['actions'][-1][key] = data.pop(key)
         plan = self.decision(data)
-        self.assertEqual(plan.actions, [{'action': 'go_to', 'target': self.bruno.id}, {'action': 'talk'}])
+        self.assertEqual(plan.actions, [{'action': 'talk'}])
         self.assertEqual(plan.listener_id, self.bruno.id)
         self.assertIn('wyprawy', plan.speech_intent)
         self.assertIn('listener_id', data['actions'][-1])  # input is not mutated
@@ -72,19 +76,21 @@ class ListenerPlanningTests(unittest.TestCase):
         with self.assertRaises(PlanValidationError):
             self.decision(data)
 
-    def test_talk_can_be_queued_after_current_approach_to_that_being(self):
-        self.ada.start_command({'action': 'go_to', 'target': self.bruno.id})
+    def test_talk_can_be_queued_after_an_independent_physical_action(self):
+        self.ada.start_command({'action': 'go_to', 'position': [3, 9]})
         plan = self.decision(talk_plan(control='queue'), self.ada.snapshot())
         self.assertEqual(plan.control, 'queue')
         self.assertEqual(plan.actions, [{'action': 'talk'}])
 
-    def test_approach_does_not_enable_talk_to_unknown_food_or_unrelated_target(self):
+    def test_food_or_unknown_id_is_not_a_chat_participant(self):
         food = self.world.add_object('food', (4, 7))
         self.ada.look(self.world, remember=True)
         snapshot = self.ada.snapshot()
-        for listener, target in [('invented', 'invented'), (food.id, food.id), ('bruno-02', food.id)]:
+        for listener, target in [('invented', 'invented'), (food.id, food.id)]:
             with self.subTest(listener=listener, target=target), self.assertRaises(PlanValidationError):
                 self.decision(talk_plan(listener, [{'action': 'go_to', 'target': target}]), snapshot)
+        plan = self.decision(talk_plan('bruno-02', [{'action': 'eat', 'target': food.id}]), snapshot)
+        self.assertEqual([a['action'] for a in plan.actions], ['eat', 'talk'])
 
     def test_plain_talk_to_present_being_still_works_and_repair_lists_exact_ids(self):
         self.bruno.position = (5, 7)
@@ -96,10 +102,11 @@ class ListenerPlanningTests(unittest.TestCase):
         self.assertIn('listener_id: bruno-02', str(error.exception))
 
     def test_empty_current_partner_list_is_explicit_even_with_old_stories(self):
-        snapshot = dict(self.snapshot, task='plan', memory='Bruno stał obok mnie i rozmawialiśmy.')
+        snapshot = dict(self.snapshot, task='plan', memory='Bruno stał obok mnie i rozmawialiśmy.',
+                        conversation={'partners': []})
         text = render_context(snapshot)
-        self.assertIn('Samo talk jest teraz niewykonalne', text)
-        self.assertIn('nie wybieraj samego talk', text)
+        self.assertIn('Brak dostępnego uczestnika czatu', text)
+        self.assertIn('podejście nie przywróci łączności', text)
         self.assertIn('Bruno stał obok', text)
 
     def test_invalid_target_feedback_identifies_which_command_needs_correction(self):
@@ -204,14 +211,14 @@ class PlanRecoveryTests(unittest.TestCase):
         self.assertFalse(sim.plan_feedback)
         self.assertFalse(sim.retry_is_validation)
 
-    def test_contact_is_rechecked_after_explicit_approach(self):
+    def test_queued_chat_rechecks_availability_after_an_independent_physical_action(self):
         sim = self.make_sim(StoryBrain())
         other = sim.add_companion(brain=StoryBrain())
         other.agent.position = (7, 7)
         other.phase = 'error'  # no independent decisions in this fixture
         sim.agent.look(sim.world, remember=True)
-        sim.agent.accept_plan(Plan('Spotkanie', 'Podejdę i porozmawiam.',
-                                   [{'action': 'go_to', 'target': other.agent.id}, {'action': 'talk'}],
+        sim.agent.accept_plan(Plan('Rozmowa', 'Rozejrzę się i napiszę.',
+                                   [{'action': 'look', 'angle': 90}, {'action': 'talk'}],
                                    listener_id=other.agent.id, speech_intent='Zapytam o podróż.'))
         sim.next_thought_lifetime = 100
         sim.action_delay = 0
@@ -222,10 +229,13 @@ class PlanRecoveryTests(unittest.TestCase):
                 break
         self.assertEqual(sim.agent.plan[0]['action'], 'talk')
         other.agent.position = (12, 12)
+        other.agent.die('HIDDEN_CAUSE')
+        other._handle_death()
         sim._update_behavior(5)
         self.assertFalse(sim.conversations)
         self.assertFalse(any(n.source == 'testimony' for n in other.agent.memory.nodes))
         self.assertIn('kontaktu', sim.agent.last_result)
+        self.assertNotIn('HIDDEN_CAUSE', sim.agent.memory.context())
         self.assertFalse(sim.error)
         self.assertNotEqual(sim.phase, 'retrying')
 

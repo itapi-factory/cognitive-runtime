@@ -6,7 +6,6 @@ from difflib import SequenceMatcher
 
 MAX_STORY_CHARS = 900
 MAX_STORY_WORDS = 140
-TALK_RANGE = 3
 REPLY_WINDOW = 30.0
 
 
@@ -33,7 +32,7 @@ def dialogue_label(utterance: dict | None) -> str:
             "waiting": "moja wypowiedź; jeszcze nie usłyszałam odpowiedzi",
             "answered": "ta wypowiedź otrzymała odpowiedź",
             "unanswered": "dotąd bez odpowiedzi; nie wiem dlaczego",
-            "lost_contact": "kontakt się urwał; nie usłyszałam odpowiedzi",
+            "lost_contact": "rozmówca jest niedostępny na czacie; kontakt zakończony, przyczyny nie znam",
             "peer_dead": "rozmowa zakończona: widziałam, że rozmówca jest martwy; nie może odpowiedzieć",
             "past": "wcześniejsza kwestia rozmowy"}.get(utterance.get("state"), "")
 
@@ -54,11 +53,6 @@ class Dialogue:
 
     def waiting(self, peer):
         return next((n for n in reversed(self.rows(peer)) if n.utterance["state"] == "waiting"), None)
-
-    def recent_contact(self, peer):
-        return any(n.utterance["state"] != "peer_dead" and
-                   (n.utterance["state"] in ("new", "considered", "waiting") or
-                    self.owner.lifetime_seconds - n.utterance["at"] < REPLY_WINDOW) for n in self.rows(peer))
 
     def recognize_dead(self, peer):
         changed = False
@@ -98,8 +92,11 @@ class Dialogue:
         for node in self.rows():
             info = node.utterance
             elapsed = self.owner.lifetime_seconds - info["at"]
-            if info["state"] == "waiting" and (elapsed >= REPLY_WINDOW or not connected(info["peer_id"])):
-                info["state"] = "unanswered" if elapsed >= REPLY_WINDOW else "lost_contact"
+            if info["state"] in ("new", "considered", "waiting") and not connected(info["peer_id"]):
+                info["state"] = "lost_contact"
+                changed.append(node)
+            elif info["state"] == "waiting" and elapsed >= REPLY_WINDOW:
+                info["state"] = "unanswered"
                 changed.append(node)
         if changed:
             self.owner.memory._trim()
